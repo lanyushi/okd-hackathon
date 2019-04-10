@@ -39,7 +39,7 @@ openshift_master_cluster_public_hostname=yourname.create9.io
 openshift_master_cluster_hostname=yourname-int.create9.io
 
 # # point <*.apps.yourname>.create9.io to  infra-lb ip address
-openshift_master_default_subdomain=*.apps.yourname.create9.io
+openshift_master_default_subdomain=apps.yourname.create9.io
 
 
 #openshift_master_overwrite_named_certificates=false
