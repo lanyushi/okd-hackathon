@@ -1,0 +1,118 @@
+[OSEv3:children]
+masters
+nodes
+etcd
+new_nodes
+
+[OSEv3:vars]
+#ansible_python_interpreter=/usr/bin/python3  > if its fedora
+os_firewall_use_firewalld=false
+openshift_enable_service_catalog=false
+
+openshift_master_api_port=443
+openshift_master_console_port=443
+
+openshift_enable_excluders=false
+openshift_enable_docker_excluder=false
+openshift_deployment_type=origin
+openshift_portal_net=172.30.0.0/16
+openshift_release=v3.11
+openshift_image_tag=v3.11.0
+openshift_disable_check=disk_availability,docker_storage,memory_availability,docker_image_availability,package_availability,package_version
+
+
+
+openshift_logging_es_nodeselector={"node-role.kubernetes.io/infra":"true"}
+
+#jq -c . node-config.json  | pbcopy
+openshift_node_groups=[{"name":"node-config-master","labels":["node-role.kubernetes.io/master=true","node-role.kubernetes.io/compute=true"]},{"name":"node-config-infra","labels":["node-role.kubernetes.io/compute=true","node-role.kubernetes.io/infra=true"]},{"name":"node-config-compute","labels":["node-role.kubernetes.io/compute=true"]}]
+
+
+openshift_docker_selinux_enabled=False
+ansible_user=root
+ansible_become=true
+openshift_master_admission_plugin_config={"ValidatingAdmissionWebhook":{"configuration":{"kind":"DefaultAdmissionConfig","apiVersion":"v1","disable":false}},"MutatingAdmissionWebhook":{"configuration":{"kind":"DefaultAdmissionConfig","apiVersion":"v1","disable":false}}}
+
+# point <yourname>.create9.io to  masters-lb ip address
+# point <yourname-int>.create9.io to  masters-lb ip address
+openshift_master_cluster_public_hostname=yourname.create9.io
+openshift_master_cluster_hostname=yourname-int.create9.io
+
+# # point <*.apps.yourname>.create9.io to  infra-lb ip address
+openshift_master_default_subdomain=*.apps.yourname.create9.io
+
+
+#openshift_master_overwrite_named_certificates=false
+#openshift_master_named_certificates=[{"certfile": "/etc/yourname.create9.io/certs/yourname.create9.io/fullchain1.pem", "keyfile": "/etc/yourname.create9.io/certs/yourname.create9.io/privkey1.pem", "names": ["yourname.create9.io"]}]
+#openshift_hosted_router_certificate={"certfile": "/etc/yourname.create9.io/certs/wildcard.apps.create9.io/fullchain.cer", "keyfile": "/etc/yourname.create9.io/certs/wildcard.apps.create9.io/*.apps.create9.io.key", "cafile": "/etc/yourname.create9.io/certs/wildcard.apps.create9.io/*.apps.create9.io.cer"}
+
+
+
+openshift_cluster_monitoring_operator_install=false
+openshift_cluster_monitoring_operator_prometheus_storage_enabled=true
+openshift_cluster_monitoring_operator_alertmanager_storage_enabled=true
+openshift_cluster_monitoring_operator_prometheus_storage_capacity=15Gi
+openshift_cluster_monitoring_operator_alertmanager_storage_capacity=3Gi
+openshift_metrics_duration=2
+openshift_metrics_cassandra_storage_type=dynamic
+openshift_metrics_cassandra_nodeselector={'node-role.kubernetes.io/infra':'true'}
+openshift_metrics_cassandra_replicas=1
+
+
+openshift_metrics_install_metrics=false
+openshift_metrics_hawkular_replicas=1
+openshift_metrics_heapster_standalone=true
+openshift_metrics_heapster_nodeselector={'node-role.kubernetes.io/infra':'true'}
+#openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider'},{'name': 'YOUR-OAuth', 'login': 'true', 'challenge': 'false', 'mappingMethod': 'claim', 'kind': 'OpenIDIdentityProvider','clientID': 'openshift-001','clientSecret': '<THE-PASSWORD>', 'claims':{'id':['sub'],'preferredUsername':['preferred_username'],'name':['name'],'email':['email']},'urls':{'authorize':'https://secure-sso<your-domain>/auth/realms/MY-REALM/protocol/openid-connect/auth','token': 'https://secure-sso<your-domain>/auth/realms/MY-REALM/protocol/openid-connect/token','userInfo':'https://secure-sso<your-domain>/auth/realms/MY-REALM/protocol/openid-connect/userinfo'}}]
+
+
+
+
+#openshift_hosted_registry_storage_kind=object
+#openshift_hosted_registry_routehost=registry.create9.io
+#openshift_hosted_registry_storage_provider=s3
+#openshift_hosted_registry_storage_s3_encrypt=false
+#openshift_hosted_registry_storage_s3_accesskey=dummy
+#openshift_hosted_registry_storage_s3_secretkey=dummy
+#openshift_hosted_registry_pullthrough=true
+#openshift_hosted_registry_acceptschema2=false
+#openshift_hosted_registry_enforcequota=true
+#openshift_hosted_registry_storage_s3_region=registry
+#openshift_hosted_registry_storage_s3_regionendpoint=https://s3.create9.io/
+#openshift_hosted_registry_storage_s3_bucket=registry
+#openshift_hosted_registry_storage_s3_rootdirectory=/registry
+
+#logging
+openshift_logging_install_logging=False
+openshift_logging_storage_kind=dynamic
+openshift_logging_es_cluster_size=1
+openshift_logging_es_ops_pvc_size=10Gi
+openshift_logging_es_pvc_size=25Gi
+openshift_logging_elasticsearch_pvc_dynamic=true
+openshift_logging_elasticsearch_pvc_size=50Gi
+openshift_logging_kibana_hostname=logs.apps.yourname.create9.io
+
+
+
+[masters]
+master1 openshift_node_group_name="node-config-master" 
+master2 openshift_node_group_name="node-config-master"
+master3 openshift_node_group_name="node-config-master"
+
+[etcd]
+master1 openshift_node_group_name="node-config-master" 
+master2 openshift_node_group_name="node-config-master"
+master3 openshift_node_group_name="node-config-master"
+
+[nodes]
+master1 openshift_node_group_name="node-config-master" ansible_user=root 
+master2 openshift_node_group_name="node-config-master"
+master3 openshift_node_group_name="node-config-master"
+
+infra1 openshift_node_group_name="node-config-infra"
+infra2 openshift_node_group_name="node-config-infra"
+
+node1 openshift_node_group_name="node-config-compute"
+node2 openshift_node_group_name="node-config-compute"
+
+[new_nodes]
