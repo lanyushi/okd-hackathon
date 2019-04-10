@@ -189,7 +189,7 @@ ansible all -m copy -a "src=origin.repo dest=/etc/yum.repos.d/origin.repo"
 ```
 
 
-### Install the cluster
+### 10. Install the cluster
 ```shell=
 ansible-playbook ~/openshift-ansible/playbooks/byo/openshift_facts.yml
 ansible-playbook ~/openshift-ansible/playbooks/prerequisites.yml
