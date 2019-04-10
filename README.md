@@ -9,7 +9,7 @@
 * ```ssh-keygen```  on your machine and  copy  `~/.ssh/id_rsa.pub`
 
 
-## 3. Provision master-lb loadbalancer in singapore region
+## 3. Provision masters-lb loadbalancer in singapore region
 * When provisioning masters-lb  make sure 80,443 are forwarded
 * for certificate on https port,  use `passthrough` mechanism.
 * We will add master vm's later in the process.
@@ -38,26 +38,44 @@
 * Take 8GB Mem  (lastest centos) size for all  VM's
 * for each compute vm add additional docker storage volume of size 50GB
 
-## 8. Preparing sample inventory
+## 8.0  Preparing bastion host
+* From now on we'll do all the acticity on bastion host.   example master1
+* First copy id_rsa from your laptop to master1
+```shell=
+scp -r ~/.ssh/id_rsa root@<master-ip>:/tmp/id_rsa
+ssh root@<master-ip>
+```
+> run all the next steps on master1 (bastion)
+
+```shell=
+ssh-agent $SHELL
+ssh-add /tmp/id_rsa
+export ANSIBLE_HOST_KEY_CHECKING=False
+
+rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum update -y
+yum install ansible -y
+easy_install pip
+pip install -U pyopenssl
+```
+
+## 8.1 Preparing sample inventory
 * Use the inventory https://github.com/debianmaster/okd-hackathon.git  as reference for your inventory file.
-* `cd okd-hackathon`
+* `git clone https://github.com/debianmaster/okd-hackathon.git && cd okd-hackathon`
 * make a hard link of hosts file in this repo to   /etc/ansible/hosts  using  `sudo ln hosts /etc/ansible/hosts`
 * Update inventory file with your own ip values.  Since we dont have a working dns we'll use nip.io  appended to ip address.
 
-
+> All the steps from here on are on bastion host i.e master1 in our case
 
 ## 9. Checks before Starting installation.
 
-### 9.0 Make sure ansible environment is set right.
+### 9.0 Make sure ansible environment is set right.  
 ```shell=
-easy_install pip
-pip install -U pyopenssl
 export ANSIBLE_HOST_KEY_CHECKING=False
-
 ansible all -m ping
 ```
 
-### 9.1 Make sure latest packages are installed on these vm's
+### 9.1 Make sure latest packages are installed on these vm's 
 ```shell=
 ansible all -a "rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm"
 ansible all -a "yum install ansible -y"
@@ -83,7 +101,7 @@ ansible all -a "systemctl restart  dnsmasq"
 ### 9.2 Make sure selinux is to enforcing 
 ```shell=
 ansible all  -a "getenforce"
-ansible all  -a "setenforce 0"
+ansible all  -a "setenforce 1"
 ```
 
 ### 9.3 Make sure all VMs are in same time zone and in sync
@@ -159,19 +177,19 @@ ansible masters -m shell -a "yum install httpd-tools -y"
 ansible masters -m shell -a "yum install centos-release-openshift-origin311.noarch -y"
 ```
 > Need this for most of the storage clients
-```shell
+```shell=
 ansible all -m shell -a "yum install samba-client samba-common cifs-utils iscsi-initiator-utils -y"
 ansible all -a "systemctl restart iscsid"
 ansible all -a "systemctl status iscsid"
 ```
 
 ### 9.15 Install docker
-```
+```shell=
 ansible all -m shell -a "yum install docker -y"
 ```
 
 ### 9.16 See if you need restarting of server,  restart all hosts if necessary
-```
+```shell=
 ansible all -m shell -a "/usr/bin/needs-restarting -r"
 #ansible all -a "systemctl reboot"
 ```
@@ -191,6 +209,8 @@ ansible all -m copy -a "src=origin.repo dest=/etc/yum.repos.d/origin.repo"
 
 ### 10. Install the cluster
 ```shell=
+git clone https://github.com/openshift/openshift-ansible.git ~/openshift-ansible
+cd openshift-ansible && git checkout release-3.11
 ansible-playbook ~/openshift-ansible/playbooks/byo/openshift_facts.yml
 ansible-playbook ~/openshift-ansible/playbooks/prerequisites.yml
 ansible-playbook ~/openshift-ansible/playbooks/deploy_cluster.yml
