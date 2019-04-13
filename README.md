@@ -12,6 +12,7 @@
 ## 3. Provision masters-lb loadbalancer in singapore region
 * When provisioning masters-lb  make sure 80,443 are forwarded
 * for certificate on https port,  use `passthrough` mechanism.
+* for Healthcheck using TCP 443.
 * We will add master vm's later in the process.
 
 ## 4. Provision infra-lb loadbalancer in singapore region
@@ -41,6 +42,7 @@
 ## 8.0  Preparing bastion host
 * From now on we'll do all the acticity on bastion host.   example master1
 * First copy id_rsa from your laptop to master1
+* It require to run everytime reboot master1
 ```shell=
 scp -r ~/.ssh/id_rsa root@<master-ip>:/tmp/id_rsa
 ssh root@<master-ip>
@@ -62,6 +64,7 @@ pip install -U pyopenssl
 ## 8.1 Preparing sample inventory
 * Use the inventory https://github.com/debianmaster/okd-hackathon.git  as reference for your inventory file.
 * `git clone https://github.com/debianmaster/okd-hackathon.git && cd okd-hackathon`
+* remove /etc/ansible/hosts
 * make a hard link of hosts file in this repo to   /etc/ansible/hosts  using  `sudo ln hosts /etc/ansible/hosts`
 * Update inventory file with your own ip values.  Since we dont have a working dns we'll use nip.io  appended to ip address.
 
@@ -85,6 +88,9 @@ ansible all -a "yum install ansible -y"
 ```shell=
 ansible all -a "cat /etc/hosts"
 ansible all -m lineinfile -a "path=/etc/hosts regexp={{inventory_hostname}} state=absent"
+ansible all -m lineinfile -a "path=/etc/hosts regexp=master state=absent"
+ansible all -m lineinfile -a "path=/etc/hosts regexp=infra state=absent"
+ansible all -m lineinfile -a "path=/etc/hosts regexp=node state=absent"
 ```
 > This will make sure controller,api pods are able to reach out to etc without dns resolution issues.
 > Otherwise controllers will try to make an attempt to connect to etcd on  127.0.0.1:2379 which is not accurate.
@@ -131,6 +137,7 @@ ansible all -a "systemctl status firewalld"
 ansible all -a "systemctl stop firewalld"
 ansible all -a "systemctl disable firewalld"
 ```
+* did not required for this lab
 
 ### 9.10 Make sure hostname and hostname -f are all FQDN
 ```shell=
@@ -159,11 +166,13 @@ ansible all -a "ip -4 route get 8.8.8.8"
 >  if you need to change this interface you need to use this command
 >  `#ansible all -a "route add -net 8.8.8.8 netmask 255.255.255.255 <interfacename>"`
 
+* I did changed to eth1 using above command.
+
 ### 9.13 For the target interface make sure NM_CONTROLLED, PEERDNS, ip_forward are set as below.
 > change the interface name if necessary
 ```shell=
-ansible all -m lineinfile -a "path=/etc/sysconfig/network-scripts/ifcfg-eth0 line=NM_CONTROLLED='yes'"
-ansible all -m lineinfile -a "path=/etc/sysconfig/network-scripts/ifcfg-eth0 line=PEERDNS='yes'"
+ansible all -m lineinfile -a "path=/etc/sysconfig/network-scripts/ifcfg-eth1 line=NM_CONTROLLED='yes'"
+ansible all -m lineinfile -a "path=/etc/sysconfig/network-scripts/ifcfg-eth1 line=PEERDNS='yes'"
 ansible all -m sysctl -a "name=net.ipv4.ip_forward value=1 sysctl_set=yes state=present reload=yes"
 ansible all -m sysctl -a "name=net.ipv6.conf.all.disable_ipv6 value=1 sysctl_set=yes state=present reload=yes"
 ansible all -m sysctl -a "name=net.ipv6.conf.default.disable_ipv6 value=1 sysctl_set=yes state=present reload=yes"
@@ -171,8 +180,7 @@ ansible all -m sysctl -a "name=net.ipv6.conf.default.disable_ipv6 value=1 sysctl
 
 ### 9.14 Intall rpm dependencies
 ```shell
-ansible all -m shell -a 'yum install  epel-release wget git net-tools bind-utils yum-utils iptables-services bridge-
-utils bash-completion kexec-tools sos psacct -y'
+ansible all -m shell -a 'yum install  epel-release wget git net-tools bind-utils yum-utils iptables-services bridge-utils bash-completion kexec-tools sos psacct -y'
 ansible masters -m shell -a "yum install httpd-tools -y"
 ansible masters -m shell -a "yum install centos-release-openshift-origin311.noarch -y"
 ```
